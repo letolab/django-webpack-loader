@@ -1,6 +1,8 @@
 from django.apps import AppConfig
+from django.core.cache import cache
 
 from .errors import BAD_CONFIG_ERROR
+from .utils import STATS_FILE_CACHE_KEY
 
 
 def webpack_cfg_check(app_configs, **kwargs):
@@ -26,3 +28,6 @@ class WebpackLoaderConfig(AppConfig):
     def ready(self):
         from django.core.checks import register, Tags
         register(Tags.compatibility)(webpack_cfg_check)
+
+        # Invalidate stats file cache
+        cache.delete(STATS_FILE_CACHE_KEY)

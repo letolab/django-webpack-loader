@@ -3,11 +3,13 @@ import json
 import time
 
 from django.conf import settings
+from django.core.cache import cache
 from django.contrib.staticfiles.storage import staticfiles_storage
 
 
-__all__ = ('get_assets', 'get_config', 'get_bundle',)
+__all__ = ('get_assets', 'get_config', 'get_bundle', 'STATS_FILE_CACHE_KEY')
 
+STATS_FILE_CACHE_KEY = "DJANGO_WEBPACK_LOADER_STATS_FILE"
 
 DEFAULT_CONFIG = {
     'DEFAULT': {
@@ -45,13 +47,20 @@ def get_config(config_name):
 
 
 def get_assets(config):
+    assets = cache.get(STATS_FILE_CACHE_KEY)
+    if assets is not None:
+        return assets
+
     if not config["LOCAL"]:
         open_file_func = staticfiles_storage.open
     else:
         open_file_func = open
     try:
         with open_file_func(config['STATS_FILE']) as f:
-            return json.load(f)
+            assets = json.load(f)
+            if not settings.DEBUG:
+                cache.set(STATS_FILE_CACHE_KEY, assets, None)
+            return assets
     except IOError:
         raise IOError(
             'Error reading {}. Are you sure webpack has generated the file '
